@@ -52,6 +52,10 @@ export default function EditEventPage({ evt }) {
     });
 
     if (!res.ok) {
+      if (res.status === 403 || res.status === 401) {
+        toast.error('Unauthorized');
+        return;
+      }
       toast.error('Something Went Wrong');
     } else {
       const evt = await res.json();
