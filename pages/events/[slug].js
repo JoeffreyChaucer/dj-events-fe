@@ -3,21 +3,27 @@ import 'react-toastify/dist/ReactToastify.css';
 import { FaPencilAlt, FaTimes } from 'react-icons/fa';
 import { useRouter } from 'next/router';
 import { useContext } from 'react';
+import { parseCookies } from '@/helpers/index';
 import Link from 'next/link';
 import Image from 'next/image';
 import AuthContext from '@/context/AuthContext';
 import Layout from '@/components/Layout';
+import EventMap from '@/components/EventMap';
 import { API_URL } from '@/config/index';
 import styles from '@/styles/Event.module.css';
 
-export default function EventPage({ evt }) {
+export default function EventPage({ evt, token }) {
   const { user } = useContext(AuthContext);
+
   const router = useRouter();
 
   const deleteEvent = async (e) => {
     if (confirm('Are you sure?')) {
       const res = await fetch(`${API_URL}/events/${evt.id}`, {
         method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const data = await res.json();
@@ -32,7 +38,7 @@ export default function EventPage({ evt }) {
   return (
     <Layout>
       <div className={styles.event}>
-        {user && (
+        {user && user.id === evt.user.id ? (
           <div className={styles.controls}>
             <Link href={`/events/edit/${evt.id}`}>
               <a>
@@ -42,6 +48,10 @@ export default function EventPage({ evt }) {
             <a href='#' className={styles.delete} onClick={deleteEvent}>
               <FaTimes /> Delete Event
             </a>
+          </div>
+        ) : (
+          <div className={styles.controls}>
+            <h3>Organizer: {evt.user.username}</h3>
           </div>
         )}
         <span>
@@ -67,6 +77,8 @@ export default function EventPage({ evt }) {
         <h3>Venue: {evt.venue}</h3>
         <p>{evt.address}</p>
 
+        <EventMap evt={evt}></EventMap>
+
         <Link href='/events'>
           <a className={styles.back}>{'<'} Go Back</a>
         </Link>
@@ -75,7 +87,9 @@ export default function EventPage({ evt }) {
   );
 }
 
-export async function getServerSideProps({ query: { slug } }) {
+export async function getServerSideProps({ query: { slug }, req }) {
+  const { token } = parseCookies(req);
+
   const res = await fetch(`${API_URL}/events?slug=${slug}`);
 
   const events = await res.json();
@@ -83,6 +97,7 @@ export async function getServerSideProps({ query: { slug } }) {
   return {
     props: {
       evt: events[0],
+      token,
     },
   };
 }
