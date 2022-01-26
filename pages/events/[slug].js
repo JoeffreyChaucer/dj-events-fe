@@ -11,34 +11,42 @@ import Layout from '@/components/Layout';
 import EventMap from '@/components/EventMap';
 import { API_URL } from '@/config/index';
 import styles from '@/styles/Event.module.css';
+import qs from 'qs';
 
 export default function EventPage({ evt, token }) {
   const { user } = useContext(AuthContext);
 
   const router = useRouter();
 
-  const deleteEvent = async (e) => {
-    if (confirm('Are you sure?')) {
-      const res = await fetch(`${API_URL}/events/${evt.id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  const {
+    data: [{ attributes: event }],
+  } = evt;
 
-      const data = await res.json();
+  const imageMedium = event.image.data.attributes.formats.medium.url;
 
-      if (!res.ok) {
-        toast.error(data.message);
-      } else {
-        router.push('/events');
-      }
-    }
-  };
+  // const deleteEvent = async (e) => {
+  //   if (confirm('Are you sure?')) {
+  //     const res = await fetch(`${API_URL}/events/${evt.id}`, {
+  //       method: 'DELETE',
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //     });
+
+  //     const data = await res.json();
+
+  //     if (!res.ok) {
+  //       toast.error(data.message);
+  //     } else {
+  //       router.push('/events');
+  //     }
+  //   }
+  // };
+
   return (
     <Layout>
       <div className={styles.event}>
-        {user && user.id === evt.user.id ? (
+        {/* {user && user.id === evt.user.id ? (
           <div className={styles.controls}>
             <Link href={`/events/edit/${evt.id}`}>
               <a>
@@ -56,28 +64,28 @@ export default function EventPage({ evt, token }) {
         )}
         <span>
           {new Date(evt.date).toLocaleDateString('en-US')} at {evt.time}
-        </span>
-        <h1>{evt.name}</h1>
+        </span> */}
+        <h1>{event.name}</h1>
         <ToastContainer />
-        {evt.image && (
+        {event.image && (
           <div className={styles.image}>
             <Image
-              src={evt.image.formats.medium.url}
+              src={imageMedium}
               width={960}
               height={600}
-              alt={evt.name}
+              alt={event.name}
             />
           </div>
         )}
 
         <h3>Performers:</h3>
-        <p>{evt.performers}</p>
+        <p>{event.performers}</p>
         <h3>Description:</h3>
-        <p>{evt.description}</p>
-        <h3>Venue: {evt.venue}</h3>
-        <p>{evt.address}</p>
+        <p>{event.description}</p>
+        <h3>Venue: {event.venue}</h3>
+        <p>{event.address}</p>
 
-        <EventMap evt={evt}></EventMap>
+        <EventMap evt={event}></EventMap>
 
         <Link href='/events'>
           <a className={styles.back}>{'<'} Go Back</a>
@@ -88,16 +96,31 @@ export default function EventPage({ evt, token }) {
 }
 
 export async function getServerSideProps({ query: { slug }, req }) {
-  const { token } = parseCookies(req);
+  // const { token } = parseCookies(req);
 
-  const res = await fetch(`${API_URL}/events?slug=${slug}`);
+  console.log(slug);
+  const query = qs.stringify(
+    {
+      filters: {
+        slug: {
+          $eq: slug,
+        },
+      },
+      populate: ['image'],
+    },
+    {
+      encodeValuesOnly: true,
+    }
+  );
+
+  const res = await fetch(`${API_URL}/api/events?${query}`);
 
   const events = await res.json();
 
   return {
     props: {
-      evt: events[0],
-      token,
+      evt: events,
+      // token,
     },
   };
 }
