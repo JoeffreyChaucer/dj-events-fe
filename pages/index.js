@@ -1,17 +1,19 @@
 import Link from 'next/link';
 import Layout from '@/components/Layout';
+import qs from 'qs';
 import { API_URL } from '@/config/index';
 import EventItem from '@/components/EventItem';
 
-export default function HomePage({ events }) {
+export default function HomePage(props) {
+  const { events } = props;
+
   return (
     <>
       <Layout>
         <h1>Upcoming Events</h1>
         {events.length === 0 && <h3>No events to show</h3>}
-
-        {events.map((evt) => (
-          <EventItem key={evt.id} evt={evt} />
+        {events.data.map((evt, i) => (
+          <EventItem key={i} evt={evt.attributes} />
         ))}
 
         {events.length > 0 && (
@@ -24,12 +26,26 @@ export default function HomePage({ events }) {
   );
 }
 
-export async function getStaticProps() {
-  const res = await fetch(`${API_URL}/events?_sort=date:ASC&_limit=3`);
+const query = qs.stringify(
+  {
+    sort: ['date:desc'],
+    pagination: {
+      start: 1,
+      limit: 3,
+    },
+    populate: ['image'],
+  },
+
+  {
+    encodeValuesOnly: true,
+  }
+);
+
+export async function getServerSideProps() {
+  const res = await fetch(`${API_URL}/api/events?${query}`);
   const events = await res.json();
 
   return {
     props: { events },
-    revalidate: 1,
   };
 }
