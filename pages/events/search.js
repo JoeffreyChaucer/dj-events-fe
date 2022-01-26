@@ -5,7 +5,9 @@ import Layout from '@/components/Layout';
 import EventItem from '@/components/EventItem';
 import { API_URL } from '@/config/index';
 
-export default function SearchPage({ events }) {
+export default function SearchPage(props) {
+  const { events } = props;
+
   const router = useRouter();
 
   return (
@@ -13,9 +15,8 @@ export default function SearchPage({ events }) {
       <Link href='/events'>Go Back</Link>
       <h1>Search Results for {router.query.term}</h1>
       {events.length === 0 && <h3>No events to show</h3>}
-
-      {events.map((evt) => (
-        <EventItem key={evt.id} evt={evt} />
+      {events.data.map((evt, i) => (
+        <EventItem key={i} evt={evt.attributes} />
       ))}
     </Layout>
   );
@@ -23,17 +24,34 @@ export default function SearchPage({ events }) {
 
 export async function getServerSideProps({ query: { term } }) {
   const query = qs.stringify({
-    _where: {
-      _or: [
-        { name_contains: term },
-        { performers_contains: term },
-        { description_contains: term },
-        { venue_contains: term },
+    filters: {
+      $or: [
+        {
+          name: {
+            $containsi: term,
+          },
+        },
+        {
+          performers: {
+            $containsi: term,
+          },
+        },
+        {
+          description: {
+            $containsi: term,
+          },
+        },
+        {
+          venue: {
+            $containsi: term,
+          },
+        },
       ],
     },
+    populate: ['image'],
   });
 
-  const res = await fetch(`${API_URL}/events?${query}`);
+  const res = await fetch(`${API_URL}/api/events?${query}`);
   const events = await res.json();
 
   return {
