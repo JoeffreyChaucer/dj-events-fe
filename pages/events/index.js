@@ -1,39 +1,51 @@
 import Layout from '@/components/Layout';
-import EventItem from '@/components/EventItem';
+import qs from 'qs';
 import { API_URL } from '@/config/index';
-import { PER_PAGE } from '@/config/index';
+import EventItem from '@/components/EventItem';
 import Pagination from '@/components/Pagination';
 
-export default function EventsPage({ events, page, total }) {
+export default function HomePage(props) {
+  const { events, page, PER_PAGE } = props;
+
+  const totalEntries = events.meta.pagination.total;
+
   return (
-    <Layout>
-      <h1>Events</h1>
-      {events.length === 0 && <h3>No events to show</h3>}
+    <>
+      <Layout>
+        <h1>Events</h1>
+        {events.length === 0 && <h3>No events to show</h3>}
+        {events.data.map((evt, i) => (
+          <EventItem key={i} evt={evt.attributes} />
+        ))}
 
-      {events.map((evt) => (
-        <EventItem key={evt.id} evt={evt} />
-      ))}
-
-      <Pagination page={page} total={total} />
-    </Layout>
+        <Pagination page={page} total={totalEntries} perPage={PER_PAGE} />
+      </Layout>
+    </>
   );
 }
 
 export async function getServerSideProps({ query: { page = 1 } }) {
-  // Calculate start page
-  const start = +page === 1 ? 0 : (+page - 1) * PER_PAGE;
+  const PER_PAGE = 4;
 
-  // Fetch total/count
-  const totalRes = await fetch(`${API_URL}/events/count`);
-  const total = await totalRes.json();
+  const query = qs.stringify(
+    {
+      sort: ['date:asc'],
+      pagination: {
+        start: page,
+        limit: PER_PAGE,
+      },
+      populate: ['image'],
+    },
 
-  // Fetch events
-  const eventRes = await fetch(
-    `${API_URL}/events?_sort=date:ASC&_limit=${PER_PAGE}&_start=${start}`
+    {
+      encodeValuesOnly: true,
+    }
   );
+
+  const eventRes = await fetch(`${API_URL}/api/events?${query}`);
   const events = await eventRes.json();
 
   return {
-    props: { events, page: +page, total },
+    props: { events, page: +page, PER_PAGE },
   };
 }
